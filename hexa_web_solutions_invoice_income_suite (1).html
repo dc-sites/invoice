@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hexa Web Solutions and Brandings | Invoice & Revenue Suite</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- html2pdf.js for high-res A4 PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- Chart.js for Monthly Revenue Visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#4f46e5',
+              600: '#4338ca',
+              700: '#3730a3',
+              900: '#1e1b4b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Crisp White A4 Sheet Styling for Live Preview & PDF Export */
+    .invoice-a4-sheet {
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+      width: 100%;
+      max-width: 794px; /* ~210mm at 96dpi */
+      min-height: 1122px; /* ~297mm at 96dpi */
+      margin: 0 auto;
+      box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    /* Print Media Rules */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #invoice-capture-area, #invoice-capture-area * {
+        visibility: visible;
+      }
+      #invoice-capture-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 100%;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 12mm !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-slate-900 text-white sticky top-0 z-40 border-b border-slate-800 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 sm:h-18 gap-3">
+        <!-- Brand Identity -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center overflow-hidden shadow-sm shrink-0">
+            <img
+              src="https://i.postimg.cc/pL907scX/Postwizz-29042026-022021217.jpg"
+              alt="Hexa Web Solutions Logo"
+              class="w-full h-full object-contain rounded-lg"
+              onerror="this.onerror=null; this.src='https://placehold.co/100x100/4f46e5/ffffff?text=HEXA';"
+            />
+          </div>
+          <div>
+            <h1 class="font-display font-bold text-base sm:text-lg tracking-tight text-white leading-tight">
+              Hexa Web Solutions and Brandings
+            </h1>
+            <p class="text-xs text-slate-400">Executive Billing & Monthly Revenue Portal</p>
+          </div>
+        </div>
+
+        <!-- Module Switcher Tabs -->
+        <nav class="flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700/80 self-start sm:self-auto">
+          <button
+            id="tab-btn-invoice"
+            onclick="switchModule('invoice')"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-indigo-600 text-white shadow-sm"
+          >
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+            <span>Invoice Generator</span>
+          </button>
+          <button
+            id="tab-btn-income"
+            onclick="switchModule('income')"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-300 hover:text-white"
+          >
+            <i class="fa-solid fa-chart-line"></i>
+            <span>Monthly Income</span>
+            <span id="nav-income-count" class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-700 text-indigo-300">0</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- ===================================================================== -->
+    <!-- MODULE 1: PROFESSIONAL INVOICE GENERATOR & LIVE A4 PDF PREVIEW        -->
+    <!-- ===================================================================== -->
+    <section id="module-invoice" class="space-y-6">
+      <!-- Action Toolbar -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+              A4 White Print Ready
+            </span>
+            <span id="live-clock-badge" class="text-xs text-slate-500 font-medium"></span>
+          </div>
+          <h2 class="text-lg sm:text-xl font-bold text-slate-900 mt-1">Create & Export Client Invoice</h2>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onclick="resetInvoiceForm()"
+            class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center gap-2"
+            title="Start a fresh invoice"
+          >
+            <i class="fa-solid fa-rotate-right"></i>
+            <span>New Invoice</span>
+          </button>
+
+          <button
+            type="button"
+            onclick="logCurrentInvoiceToIncome()"
+            class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors flex items-center gap-2"
+          >
+            <i class="fa-solid fa-circle-plus"></i>
+            <span>Log to Monthly Income</span>
+          </button>
+
+          <button
+            type="button"
+            onclick="window.print()"
+            class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 transition-colors flex items-center gap-2"
+          >
+            <i class="fa-solid fa-print"></i>
+            <span>Print</span>
+          </button>
+
+          <button
+            id="download-pdf-btn"
+            type="button"
+            onclick="downloadInvoicePDF()"
+            class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2"
+          >
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>Download PDF</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Two-Column Workspace: Left Form Editor | Right Crisp White A4 PDF Preview -->
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+
+        <!-- LEFT COLUMN: INVOICE EDITOR CONTROLS (5 cols on xl) -->
+        <div class="xl:col-span-5 space-y-5">
+          <!-- Invoice & Client Details Card -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 class="font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-address-card text-indigo-600"></i>
+                Invoice & Client Information
+              </h3>
+              <button onclick="regenerateInvoiceNumber()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                <i class="fa-solid fa-arrows-rotate mr-1"></i>New #
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Invoice Number</label>
+                <input
+                  type="text"
+                  id="input-invoice-no"
+                  oninput="syncPreview()"
+                  class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Currency</label>
+                <select
+                  id="input-currency"
+                  onchange="syncPreview()"
+                  class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                  <option value="LKR " selected>LKR (Sri Lankan Rupee)</option>
+                  <option value="Rs. ">Rs. (Rupees)</option>
+                  <option value="$ ">USD ($)</option>
+                  <option value="€ ">EUR (€)</option>
+                  <option value="£ ">GBP (£)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Client / Company Name</label>
+                <input
+                  type="text"
+                  id="input-client-name"
+                  placeholder="e.g., Ceylon Apex Holdings (Pvt) Ltd"
+                  value="Ceylon Apex Holdings (Pvt) Ltd"
+                  oninput="syncPreview()"
+                  class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Client Phone / Email</label>
+                <input
+                  type="text"
+                  id="input-client-contact"
+                  placeholder="e.g., +94 77 123 4567"
+                  value="+94 77 458 9210 | billing@ceylonapex.lk"
+                  oninput="syncPreview()"
+                  class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Client Address</label>
+              <input
+                type="text"
+                id="input-client-address"
+                placeholder="e.g., No. 45, Galle Road, Colombo 03"
+                value="No. 45, Galle Road, Colombo 03, Sri Lanka"
+                oninput="syncPreview()"
+                class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Due Date / Terms</label>
+                <input
+                  type="text"
+                  id="input-due-terms"
+                  value="Due Upon Receipt"
+                  oninput="syncPreview()"
+                  class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Discount / Tax (%)</label>
+                <div class="flex gap-2">
+                  <input
+                    type="number"
+                    id="input-discount"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value="0"
+                    oninput="syncPreview()"
+                    placeholder="Disc %"
+                    title="Discount Percentage"
+                    class="w-1/2 px-2.5 py-2 rounded-xl border border-slate-300 text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                  <input
+                    type="number"
+                    id="input-tax"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value="0"
+                    oninput="syncPreview()"
+                    placeholder="Tax %"
+                    title="Tax Percentage"
+                    class="w-1/2 px-2.5 py-2 rounded-xl border border-slate-300 text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <div class="flex justify-between text-[10px] text-slate-400 px-1 mt-0.5">
+                  <span>Discount %</span>
+                  <span>Tax / VAT %</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Products / Services Line Items Editor -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 class="font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-boxes-stacked text-indigo-600"></i>
+                Products & Services
+              </h3>
+              <button
+                type="button"
+                onclick="addLineItem()"
+                class="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors flex items-center gap-1.5"
+              >
+                <i class="fa-solid fa-plus"></i>
+                <span>Add Item</span>
+              </button>
+            </div>
+
+            <div id="line-items-editor-list" class="space-y-3">
+              <!-- Dynamic item cards injected via JS -->
+            </div>
+
+            <!-- Notes Input -->
+            <div class="pt-2 border-t border-slate-100">
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Additional Invoice Note</label>
+              <textarea
+                id="input-notes"
+                rows="2"
+                oninput="syncPreview()"
+                class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+              >Please include the Invoice Number as the payment reference when making your bank transfer.</textarea>
+            </div>
+          </div>
+
+          <!-- Verified Bank Details Reference Card -->
+          <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-sm border border-slate-800">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                <i class="fa-solid fa-building-columns"></i>
+                Embedded Bank Settlement Details
+              </span>
+              <span class="text-[11px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-medium">Auto-Included in PDF</span>
+            </div>
+            <div class="space-y-1.5 text-xs sm:text-sm font-mono bg-slate-800/80 p-3.5 rounded-xl border border-slate-700">
+              <p><span class="text-slate-400">NAME:</span> <span class="font-bold text-white">R.M.D.C.RATHNAYAKE</span></p>
+              <p><span class="text-slate-400">ACCOUNT NO:</span> <span class="font-bold text-amber-300">002200160093696</span></p>
+              <p><span class="text-slate-400">BANK:</span> <span class="font-bold text-white">PEOPLE'S BANK</span></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: CRISP WHITE A4 PDF PREVIEW SHEET (7 cols on xl) -->
+        <div class="xl:col-span-7">
+          <div class="bg-slate-200/70 p-3 sm:p-6 rounded-2xl border border-slate-300/80 overflow-x-auto">
+            <div class="flex items-center justify-between mb-3 px-1">
+              <span class="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                <i class="fa-solid fa-eye text-indigo-600"></i>
+                Live A4 PDF Document Preview (Pure White Background)
+              </span>
+              <span class="text-[11px] text-slate-500">210mm × 297mm Standard A4</span>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- TARGET CAPTURE AREA FOR PDF GENERATION (PURE WHITE #FFFFFF)  -->
+            <!-- ============================================================ -->
+            <div id="invoice-capture-area" class="invoice-a4-sheet p-8 sm:p-11 bg-white text-slate-900">
+
+              <!-- TOP & MIDDLE CONTENT WRAPPER -->
+              <div>
+                <!-- 1. PROFESSIONAL HEADER WITH LOGO & BUSINESS TITLE -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-slate-900 pb-6 gap-4">
+                  <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0">
+                      <img
+                        id="pdf-logo-img"
+                        src="https://i.postimg.cc/pL907scX/Postwizz-29042026-022021217.jpg"
+                        alt="Hexa Web Solutions and Brandings"
+                        crossorigin="anonymous"
+                        class="w-full h-full object-contain rounded-lg"
+                        onerror="this.onerror=null; this.src='https://placehold.co/160x160/1e1b4b/ffffff?text=HEXA';"
+                      />
+                    </div>
+                    <div>
+                      <h1 class="font-display font-extrabold text-xl sm:text-2xl text-slate-950 tracking-tight leading-snug">
+                        Hexa Web Solutions and Brandings
+                      </h1>
+                      <p class="text-xs text-slate-500 font-medium mt-0.5">
+                        Web Engineering • Digital Branding • Creative IT Solutions
+                      </p>
+                      <p class="text-[11px] text-slate-400 mt-0.5">
+                        Sri Lanka | Official Tax & Commercial Invoice
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sm:text-right self-end sm:self-center">
+                    <span class="inline-block px-3 py-1 bg-slate-900 text-white text-xs font-extrabold tracking-widest uppercase rounded">
+                      INVOICE
+                    </span>
+                    <p id="preview-invoice-no" class="text-sm font-bold text-slate-900 mt-2 font-mono">
+                      #INV-2026-001
+                    </p>
+                    <p class="text-[11px] text-slate-500 mt-0.5">
+                      Generated: <span id="preview-generated-datetime" class="font-semibold text-slate-700">--</span>
+                    </p>
+                  </div>
+                </div>
+
+                <!-- 2. BILL TO & INVOICE METADATA ROW -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 py-6 border-b border-slate-200">
+                  <div>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-indigo-700 mb-1.5">
+                      Billed To
+                    </p>
+                    <h4 id="preview-client-name" class="text-base font-bold text-slate-900">
+                      Ceylon Apex Holdings (Pvt) Ltd
+                    </h4>
+                    <p id="preview-client-address" class="text-xs text-slate-600 mt-1 leading-relaxed">
+                      No. 45, Galle Road, Colombo 03, Sri Lanka
+                    </p>
+                    <p id="preview-client-contact" class="text-xs text-slate-500 mt-1">
+                      +94 77 458 9210 | billing@ceylonapex.lk
+                    </p>
+                  </div>
+
+                  <div class="sm:text-right flex flex-col justify-between">
+                    <div class="space-y-1.5 text-xs">
+                      <div class="flex sm:justify-end gap-3">
+                        <span class="text-slate-500 font-medium">Invoice Date:</span>
+                        <span id="preview-issue-date" class="font-bold text-slate-900">--</span>
+                      </div>
+                      <div class="flex sm:justify-end gap-3">
+                        <span class="text-slate-500 font-medium">Payment Terms:</span>
+                        <span id="preview-due-terms" class="font-bold text-slate-900">Due Upon Receipt</span>
+                      </div>
+                      <div class="flex sm:justify-end gap-3">
+                        <span class="text-slate-500 font-medium">Currency:</span>
+                        <span id="preview-currency-label" class="font-bold text-slate-900">LKR</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 3. LINE ITEMS TABLE (DESCRIPTION, UNITS, UNIT PRICE, TOTAL) -->
+                <div class="mt-6">
+                  <table class="w-full text-left border-collapse">
+                    <thead>
+                      <tr class="bg-slate-900 text-white text-[11px] uppercase tracking-wider">
+                        <th class="py-2.5 px-3 rounded-tl-md w-10 text-center">#</th>
+                        <th class="py-2.5 px-3">Description of Product / Service</th>
+                        <th class="py-2.5 px-3 text-center w-20">Units</th>
+                        <th class="py-2.5 px-3 text-right w-32">Unit Price</th>
+                        <th class="py-2.5 px-3 text-right rounded-tr-md w-36">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody id="preview-items-tbody" class="divide-y divide-slate-200 text-xs text-slate-800">
+                      <!-- Rows dynamically rendered here -->
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- 4. TOTALS SUMMARY & BANK ACCOUNT DETAILS SECTION -->
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-6 mt-8 pt-4">
+                  <!-- Bank Account Payment Details Box (7 cols) -->
+                  <div class="sm:col-span-7">
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                      <div class="flex items-center gap-2 mb-2.5 pb-1.5 border-b border-slate-200">
+                        <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+                        <h5 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-900">
+                          Bank Transfer / Account Details
+                        </h5>
+                      </div>
+                      <div class="space-y-1.5 text-xs">
+                        <div class="flex items-baseline gap-2">
+                          <span class="text-slate-500 font-semibold w-28 shrink-0">NAME:</span>
+                          <span class="font-bold text-slate-950 tracking-wide">R.M.D.C.RATHNAYAKE</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                          <span class="text-slate-500 font-semibold w-28 shrink-0">ACCOUNT NO:</span>
+                          <span class="font-extrabold text-slate-950 font-mono text-sm tracking-wider">002200160093696</span>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                          <span class="text-slate-500 font-semibold w-28 shrink-0">BANK:</span>
+                          <span class="font-bold text-slate-950 tracking-wide">PEOPLE'S BANK</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Invoice Notes -->
+                    <div class="mt-3 px-1">
+                      <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Notes & Instructions</p>
+                      <p id="preview-notes" class="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                        Please include the Invoice Number as the payment reference when making your bank transfer.
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Financial Totals Breakdown (5 cols) -->
+                  <div class="sm:col-span-5 flex flex-col justify-between">
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-2.5 text-xs">
+                      <div class="flex justify-between text-slate-600">
+                        <span>Subtotal</span>
+                        <span id="preview-subtotal" class="font-semibold text-slate-900">LKR 0.00</span>
+                      </div>
+                      <div id="preview-discount-row" class="flex justify-between text-emerald-700 hidden">
+                        <span>Discount (<span id="preview-discount-pct">0</span>%)</span>
+                        <span id="preview-discount-amt" class="font-semibold">- LKR 0.00</span>
+                      </div>
+                      <div id="preview-tax-row" class="flex justify-between text-slate-600 hidden">
+                        <span>Tax / VAT (<span id="preview-tax-pct">0</span>%)</span>
+                        <span id="preview-tax-amt" class="font-semibold text-slate-900">+ LKR 0.00</span>
+                      </div>
+                      <div class="border-t-2 border-slate-900 pt-2.5 flex justify-between items-center">
+                        <span class="font-extrabold text-sm text-slate-950 uppercase">Grand Total</span>
+                        <span id="preview-grand-total" class="font-extrabold text-base text-indigo-700">LKR 0.00</span>
+                      </div>
+                    </div>
+
+                    <!-- Authorized Signature Stamp Area -->
+                    <div class="mt-6 pt-4 text-right">
+                      <div class="inline-block text-center">
+                        <img
+                          id="pdf-signature-img"
+                          src="https://i.postimg.cc/SxF2Frmv/signature.png"
+                          alt="Authorized Signature"
+                          crossorigin="anonymous"
+                          class="h-12 w-auto mx-auto mb-1 object-contain"
+                          onerror="this.style.display='none'"
+                        />
+                        <div class="w-40 border-b border-slate-400 mb-1"></div>
+                        <p class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Authorized Signatory</p>
+                        <p class="text-[9px] text-slate-400">Hexa Web Solutions and Brandings</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 5. PROFESSIONAL PDF FOOTER WITH TITLE & GENERATED TIMESTAMP -->
+              <footer class="mt-10 pt-4 border-t border-slate-300 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] text-slate-500">
+                <div class="font-semibold text-slate-800">
+                  Hexa Web Solutions and Brandings &mdash; <span class="font-normal text-slate-500">Thank you for your valued business!</span>
+                </div>
+                <div class="font-mono text-slate-600">
+                  Generated on: <span id="preview-footer-timestamp" class="font-semibold text-slate-800">--</span>
+                </div>
+              </footer>
+
+            </div>
+            <!-- END CAPTURE AREA -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- MODULE 2: BUSINESS MONTHLY INCOME & REVENUE ANALYTICS TRACKER         -->
+    <!-- ===================================================================== -->
+    <section id="module-income" class="hidden space-y-6">
+      <!-- Top Header Banner -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Financial Ledger & Analytics
+          </span>
+          <h2 class="text-xl font-bold text-slate-900 mt-1">Monthly Business Income Overview</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Track monthly revenue streams, paid client invoices, and growth performance for Hexa Web Solutions and Brandings.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-xl border border-slate-200">
+            <i class="fa-regular fa-calendar text-slate-500 text-xs"></i>
+            <label for="filter-month" class="text-xs font-semibold text-slate-600">Month:</label>
+            <select
+              id="filter-month"
+              onchange="renderIncomeDashboard()"
+              class="bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer"
+            >
+              <option value="ALL">All Months (2026)</option>
+              <option value="2026-01">January 2026</option>
+              <option value="2026-02">February 2026</option>
+              <option value="2026-03">March 2026</option>
+              <option value="2026-04">April 2026</option>
+              <option value="2026-05">May 2026</option>
+              <option value="2026-06">June 2026</option>
+              <option value="2026-07">July 2026</option>
+              <option value="2026-08">August 2026</option>
+              <option value="2026-09">September 2026</option>
+              <option value="2026-10">October 2026</option>
+              <option value="2026-11">November 2026</option>
+              <option value="2026-12">December 2026</option>
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onclick="exportIncomeCSV()"
+            class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 transition-colors flex items-center gap-2"
+          >
+            <i class="fa-solid fa-file-csv text-emerald-600"></i>
+            <span>Export CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Revenue</span>
+            <span class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <i class="fa-solid fa-wallet"></i>
+            </span>
+          </div>
+          <p id="kpi-total-revenue" class="text-2xl font-extrabold text-slate-900 mt-3">LKR 0.00</p>
+          <p id="kpi-period-label" class="text-xs text-slate-400 mt-1">Across selected period</p>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed Invoices</span>
+            <span class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <i class="fa-solid fa-file-circle-check"></i>
+            </span>
+          </div>
+          <p id="kpi-invoice-count" class="text-2xl font-extrabold text-slate-900 mt-3">0</p>
+          <p class="text-xs text-emerald-600 font-medium mt-1">Verified income entries</p>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Average Deal Size</span>
+            <span class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <i class="fa-solid fa-chart-pie"></i>
+            </span>
+          </div>
+          <p id="kpi-avg-value" class="text-2xl font-extrabold text-slate-900 mt-3">LKR 0.00</p>
+          <p class="text-xs text-slate-400 mt-1">Per project / invoice</p>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Settlement Account</span>
+            <span class="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+              <i class="fa-solid fa-landmark"></i>
+            </span>
+          </div>
+          <p class="text-sm font-extrabold text-slate-900 mt-3">PEOPLE'S BANK</p>
+          <p class="text-xs font-mono text-slate-500 mt-1">A/C: 002200160093696</p>
+        </div>
+      </div>
+
+      <!-- Chart + Manual Income Entry Form -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Monthly Revenue Bar Chart (7 cols) -->
+        <div class="lg:col-span-7 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">Monthly Revenue Performance</h3>
+              <p class="text-xs text-slate-500">Visual breakdown of monthly income (LKR)</p>
+            </div>
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700">2026 Fiscal Year</span>
+          </div>
+          <div class="relative h-64 w-full">
+            <canvas id="monthlyIncomeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Add Manual Income Record Form (5 cols) -->
+        <div class="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm">
+          <h3 class="font-bold text-slate-900 text-base mb-1">Record New Income Entry</h3>
+          <p class="text-xs text-slate-500 mb-4">Manually log a client payment or retainer deposit.</p>
+
+          <form id="manual-income-form" onsubmit="handleAddManualIncome(event)" class="space-y-3.5">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Date</label>
+                <input
+                  type="date"
+                  id="income-date"
+                  required
+                  class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Invoice / Ref #</label>
+                <input
+                  type="text"
+                  id="income-ref"
+                  placeholder="INV-2026-015"
+                  required
+                  class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Client Name</label>
+              <input
+                type="text"
+                id="income-client"
+                placeholder="e.g.,Lanka Digital Studio"
+                required
+                class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Service / Project Description</label>
+              <input
+                type="text"
+                id="income-desc"
+                placeholder="e.g., Corporate Website & Brand Identity"
+                required
+                class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Amount (LKR)</label>
+                <input
+                  type="number"
+                  id="income-amount"
+                  min="1"
+                  step="0.01"
+                  placeholder="45000"
+                  required
+                  class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+                <select
+                  id="income-status"
+                  class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                  <option value="Paid">Paid (People's Bank)</option>
+                  <option value="Pending">Pending Settlement</option>
+                </select>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-2 mt-2"
+            >
+              <i class="fa-solid fa-plus-circle"></i>
+              <span>Save Income Entry</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Monthly Income Ledger Table -->
+      <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-slate-900 text-base">Income Transaction Ledger</h3>
+            <p class="text-xs text-slate-500">All recorded invoices and monthly business revenue</p>
+          </div>
+          <div class="relative w-full sm:w-64">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input
+              type="text"
+              id="income-search"
+              oninput="renderIncomeDashboard()"
+              placeholder="Search client or invoice #..."
+              class="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <th class="py-3 px-4">Date</th>
+                <th class="py-3 px-4">Invoice #</th>
+                <th class="py-3 px-4">Client</th>
+                <th class="py-3 px-4">Description</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4 text-right">Amount (LKR)</th>
+                <th class="py-3 px-4 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody id="income-ledger-tbody" class="divide-y divide-slate-100 text-xs text-slate-700">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Subtle App Footer -->
+  <footer class="bg-white border-t border-slate-200 py-4 mt-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+      <p>&copy; <span id="footer-year">2026</span> <strong class="text-slate-800">Hexa Web Solutions and Brandings</strong>. All rights reserved.</p>
+      <p>Settlement Bank: <span class="font-semibold text-slate-700">People's Bank (002200160093696)</span></p>
+    </div>
+  </footer>
+
+  <!-- ======================================================================= -->
+  <!-- JAVASCRIPT APPLICATION LOGIC                                            -->
+  <!-- ======================================================================= -->
+  <script>
+    // -------------------------------------------------------------------------
+    // 1. STATE INITIALIZATION
+    // -------------------------------------------------------------------------
+    let lineItems = [
+      {
+        id: crypto.randomUUID ? crypto.randomUUID() : 'item-1',
+        description: 'Custom Responsive Business Website Design & Development',
+        units: 1,
+        price: 65000
+      },
+      {
+        id: crypto.randomUUID ? crypto.randomUUID() : 'item-2',
+        description: 'Complete Brand Identity Package (Logo, Color System & Social Kit)',
+        units: 1,
+        price: 25000
+      },
+      {
+        id: crypto.randomUUID ? crypto.randomUUID() : 'item-3',
+        description: 'Domain Registration & Cloud Web Hosting (Annual Plan)',
+        units: 1,
+        price: 12500
+      }
+    ];
+
+    const STORAGE_KEY = 'hexa_web_solutions_income_v1';
+    let incomeChartInstance = null;
+
+    // Default sample monthly income records if localStorage is empty
+    const defaultIncomeRecords = [
+      { id: 'rec-1', date: '2026-08-14', ref: 'INV-2026-081', client: 'Kandy Hills Resort', description: 'Hotel Booking Website & SEO', amount: 115000, status: 'Paid' },
+      { id: 'rec-2', date: '2026-09-09', ref: 'INV-2026-092', client: 'NovaTech Lanka', description: 'Corporate Rebranding & UI Kit', amount: 85000, status: 'Paid' },
+      { id: 'rec-3', date: '2026-10-18', ref: 'INV-2026-104', client: 'Serendib Gems', description: 'E-Commerce Storefront Setup', amount: 145000, status: 'Paid' },
+      { id: 'rec-4', date: '2026-11-05', ref: 'INV-2026-111', client: 'Metro Auto Care', description: 'Web Portal & Digital Branding', amount: 78000, status: 'Paid' }
+    ];
+
+    let incomeRecords = loadIncomeRecords();
+
+    function loadIncomeRecords() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch (e) {
+        console.error('Error reading income storage:', e);
+      }
+      saveIncomeRecords(defaultIncomeRecords);
+      return [...defaultIncomeRecords];
+    }
+
+    function saveIncomeRecords(records) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      } catch (e) {
+        console.error('Error saving income storage:', e);
+      }
+      updateNavBadge();
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. NAVIGATION & TOAST NOTIFICATIONS
+    // -------------------------------------------------------------------------
+    function switchModule(moduleName) {
+      const invoiceSec = document.getElementById('module-invoice');
+      const incomeSec = document.getElementById('module-income');
+      const btnInvoice = document.getElementById('tab-btn-invoice');
+      const btnIncome = document.getElementById('tab-btn-income');
+
+      if (moduleName === 'invoice') {
+        invoiceSec.classList.remove('hidden');
+        incomeSec.classList.add('hidden');
+        btnInvoice.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-indigo-600 text-white shadow-sm';
+        btnIncome.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-300 hover:text-white';
+      } else {
+        invoiceSec.classList.add('hidden');
+        incomeSec.classList.remove('hidden');
+        btnIncome.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-indigo-600 text-white shadow-sm';
+        btnInvoice.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all text-slate-300 hover:text-white';
+        renderIncomeDashboard();
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const bgClass = type === 'success'
+        ? 'bg-slate-900 text-white border-emerald-500'
+        : type === 'error'
+          ? 'bg-rose-900 text-white border-rose-500'
+          : 'bg-slate-800 text-white border-indigo-500';
+      const iconClass = type === 'success'
+        ? 'fa-circle-check text-emerald-400'
+        : type === 'error'
+          ? 'fa-circle-exclamation text-rose-400'
+          : 'fa-circle-info text-indigo-400';
+
+      toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border-l-4 text-xs sm:text-sm font-medium transition-all duration-300 transform translate-y-2 opacity-0 ${bgClass}`;
+      toast.innerHTML = `<i class="fa-solid ${iconClass} text-base"></i><span>${message}</span>`;
+
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3400);
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. LIVE DATE & TIME STAMP FORMATTING
+    // -------------------------------------------------------------------------
+    function getFormattedDateTime() {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+      const timeStr = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+      return {
+        full: `${dateStr} at ${timeStr}`,
+        dateOnly: dateStr,
+        isoDate: now.toISOString().split('T')[0]
+      };
+    }
+
+    function updateLiveTimestamps() {
+      const dt = getFormattedDateTime();
+      const badge = document.getElementById('live-clock-badge');
+      const prevGen = document.getElementById('preview-generated-datetime');
+      const prevIssue = document.getElementById('preview-issue-date');
+      const prevFooter = document.getElementById('preview-footer-timestamp');
+
+      if (badge) badge.textContent = dt.full;
+      if (prevGen) prevGen.textContent = dt.full;
+      if (prevIssue) prevIssue.textContent = dt.dateOnly;
+      if (prevFooter) prevFooter.textContent = dt.full;
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. INVOICE LINE ITEMS & LIVE PREVIEW SYNC
+    // -------------------------------------------------------------------------
+    function formatMoney(amount, currencyPrefix) {
+      const num = Number(amount) || 0;
+      return `${currencyPrefix}${num.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`;
+    }
+
+    function regenerateInvoiceNumber() {
+      const now = new Date();
+      const yr = now.getFullYear();
+      const rand = Math.floor(100 + Math.random() * 900);
+      document.getElementById('input-invoice-no').value = `INV-${yr}-${rand}`;
+      syncPreview();
+    }
+
+    function renderLineItemsEditor() {
+      const container = document.getElementById('line-items-editor-list');
+      container.innerHTML = '';
+
+      lineItems.forEach((item, index) => {
+        const lineTotal = (parseFloat(item.units) || 0) * (parseFloat(item.price) || 0);
+        const currency = document.getElementById('input-currency').value;
+
+        const card = document.createElement('div');
+        card.className = 'p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2.5 relative group';
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-600">Item #${index + 1}</span>
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-bold text-slate-700">Line Total: ${formatMoney(lineTotal, currency)}</span>
+              ${lineItems.length > 1 ? `
+                <button
+                  type="button"
+                  onclick="removeLineItem('${item.id}')"
+                  class="text-slate-400 hover:text-rose-600 transition-colors p-1"
+                  title="Remove item"
+                >
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Product / Service Description</label>
+            <input
+              type="text"
+              value="${escapeHtml(item.description)}"
+              placeholder="Enter description of product or service..."
+              oninput="updateLineItem('${item.id}', 'description', this.value)"
+              class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Units (Qty)</label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value="${item.units}"
+                oninput="updateLineItem('${item.id}', 'units', this.value)"
+                class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Price per Unit</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value="${item.price}"
+                oninput="updateLineItem('${item.id}', 'price', this.value)"
+                class="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function addLineItem() {
+      lineItems.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : 'item-' + Date.now(),
+        description: '',
+        units: 1,
+        price: 0
+      });
+      renderLineItemsEditor();
+      syncPreview();
+    }
+
+    function removeLineItem(id) {
+      if (lineItems.length <= 1) return;
+      lineItems = lineItems.filter(item => item.id !== id);
+      renderLineItemsEditor();
+      syncPreview();
+    }
+
+    function updateLineItem(id, field, value) {
+      const target = lineItems.find(item => item.id === id);
+      if (!target) return;
+      if (field === 'description') {
+        target.description = value;
+      } else {
+        target[field] = parseFloat(value) || 0;
+      }
+      // Update line total label inside editor without losing input focus
+      renderLineItemsEditorLight();
+      syncPreview();
+    }
+
+    function renderLineItemsEditorLight() {
+      const currency = document.getElementById('input-currency').value;
+      const cards = document.getElementById('line-items-editor-list').children;
+      lineItems.forEach((item, idx) => {
+        if (cards[idx]) {
+          const lineTotal = (parseFloat(item.units) || 0) * (parseFloat(item.price) || 0);
+          const span = cards[idx].querySelector('span.text-slate-700');
+          if (span) span.textContent = `Line Total: ${formatMoney(lineTotal, currency)}`;
+        }
+      });
+    }
+
+    function calculateInvoiceTotals() {
+      const subtotal = lineItems.reduce((sum, item) => {
+        return sum + ((parseFloat(item.units) || 0) * (parseFloat(item.price) || 0));
+      }, 0);
+
+      const discountPct = Math.max(0, Math.min(100, parseFloat(document.getElementById('input-discount').value) || 0));
+      const taxPct = Math.max(0, Math.min(100, parseFloat(document.getElementById('input-tax').value) || 0));
+
+      const discountAmt = subtotal * (discountPct / 100);
+      const taxableAmt = subtotal - discountAmt;
+      const taxAmt = taxableAmt * (taxPct / 100);
+      const grandTotal = taxableAmt + taxAmt;
+
+      return { subtotal, discountPct, discountAmt, taxPct, taxAmt, grandTotal };
+    }
+
+    function syncPreview() {
+      const invNo = document.getElementById('input-invoice-no').value.trim() || 'INV-2026-001';
+      const currency = document.getElementById('input-currency').value;
+      const clientName = document.getElementById('input-client-name').value.trim() || 'Valued Client';
+      const clientContact = document.getElementById('input-client-contact').value.trim();
+      const clientAddress = document.getElementById('input-client-address').value.trim();
+      const dueTerms = document.getElementById('input-due-terms').value.trim() || 'Due Upon Receipt';
+      const notes = document.getElementById('input-notes').value.trim();
+
+      document.getElementById('preview-invoice-no').textContent = `#${invNo}`;
+      document.getElementById('preview-client-name').textContent = clientName;
+      document.getElementById('preview-client-address').textContent = clientAddress;
+      document.getElementById('preview-client-contact').textContent = clientContact;
+      document.getElementById('preview-due-terms').textContent = dueTerms;
+      document.getElementById('preview-currency-label').textContent = currency.trim();
+      document.getElementById('preview-notes').textContent = notes || 'Thank you for choosing Hexa Web Solutions and Brandings.';
+
+      // Render Preview Table Rows
+      const tbody = document.getElementById('preview-items-tbody');
+      tbody.innerHTML = '';
+
+      lineItems.forEach((item, index) => {
+        const units = parseFloat(item.units) || 0;
+        const price = parseFloat(item.price) || 0;
+        const rowTotal = units * price;
+
+        const tr = document.createElement('tr');
+        tr.className = index % 2 === 1 ? 'bg-slate-50/70' : 'bg-white';
+        tr.innerHTML = `
+          <td class="py-3 px-3 text-center font-semibold text-slate-500">${index + 1}</td>
+          <td class="py-3 px-3 font-medium text-slate-900">${escapeHtml(item.description) || '<span class="text-slate-400 italic">Product / Service Item</span>'}</td>
+          <td class="py-3 px-3 text-center font-semibold text-slate-700">${units}</td>
+          <td class="py-3 px-3 text-right text-slate-700">${formatMoney(price, currency)}</td>
+          <td class="py-3 px-3 text-right font-bold text-slate-900">${formatMoney(rowTotal, currency)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Update Totals
+      const totals = calculateInvoiceTotals();
+      document.getElementById('preview-subtotal').textContent = formatMoney(totals.subtotal, currency);
+
+      const discRow = document.getElementById('preview-discount-row');
+      if (totals.discountPct > 0) {
+        discRow.classList.remove('hidden');
+        document.getElementById('preview-discount-pct').textContent = totals.discountPct;
+        document.getElementById('preview-discount-amt').textContent = `- ${formatMoney(totals.discountAmt, currency)}`;
+      } else {
+        discRow.classList.add('hidden');
+      }
+
+      const taxRow = document.getElementById('preview-tax-row');
+      if (totals.taxPct > 0) {
+        taxRow.classList.remove('hidden');
+        document.getElementById('preview-tax-pct').textContent = totals.taxPct;
+        document.getElementById('preview-tax-amt').textContent = `+ ${formatMoney(totals.taxAmt, currency)}`;
+      } else {
+        taxRow.classList.add('hidden');
+      }
+
+      document.getElementById('preview-grand-total').textContent = formatMoney(totals.grandTotal, currency);
+    }
+
+    function resetInvoiceForm() {
+      regenerateInvoiceNumber();
+      document.getElementById('input-client-name').value = '';
+      document.getElementById('input-client-contact').value = '';
+      document.getElementById('input-client-address').value = '';
+      document.getElementById('input-discount').value = '0';
+      document.getElementById('input-tax').value = '0';
+      lineItems = [
+        {
+          id: 'item-' + Date.now(),
+          description: '',
+          units: 1,
+          price: 0
+        }
+      ];
+      renderLineItemsEditor();
+      syncPreview();
+      showToast('Started a clean new invoice template.', 'info');
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. HIGH-RES WHITE-BACKGROUND A4 PDF EXPORT
+    // -------------------------------------------------------------------------
+    async function downloadInvoicePDF() {
+      const btn = document.getElementById('download-pdf-btn');
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Generating PDF...</span>`;
+
+      // Refresh timestamp right before generating PDF
+      updateLiveTimestamps();
+
+      const element = document.getElementById('invoice-capture-area');
+      const invNo = (document.getElementById('input-invoice-no').value.trim() || 'Invoice').replace(/[^a-zA-Z0-9-_]/g, '_');
+      const filename = `Hexa_Web_Solutions_${invNo}.pdf`;
+
+      const opt = {
+        margin: [6, 6, 6, 6], // mm margins
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: '#ffffff',
+          logging: false
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait'
+        }
+      };
+
+      try {
+        await html2pdf().set(opt).from(element).save();
+        showToast(`PDF downloaded: ${filename}`, 'success');
+      } catch (err) {
+        console.error('PDF generation error:', err);
+        showToast('Direct image CORS blocked by browser; retrying clean export...', 'info');
+        // Fallback without external image taint if host blocks CORS
+        const logoImg = document.getElementById('pdf-logo-img');
+        const origSrc = logoImg.src;
+        logoImg.src = 'https://placehold.co/160x160/1e1b4b/ffffff?text=HEXA';
+        try {
+          await html2pdf().set(opt).from(element).save();
+          showToast(`PDF downloaded: ${filename}`, 'success');
+        } finally {
+          logoImg.src = origSrc;
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. MONTHLY INCOME TRACKER & ANALYTICS LOGIC
+    // -------------------------------------------------------------------------
+    function logCurrentInvoiceToIncome() {
+      const invNo = document.getElementById('input-invoice-no').value.trim() || 'INV-2026-NEW';
+      const client = document.getElementById('input-client-name').value.trim() || 'Client';
+      const totals = calculateInvoiceTotals();
+
+      if (totals.grandTotal <= 0) {
+        showToast('Cannot log an invoice with 0.00 total.', 'error');
+        return;
+      }
+
+      const firstDesc = lineItems[0]?.description || 'Web Solutions & Branding';
+      const summaryDesc = lineItems.length > 1
+        ? `${firstDesc} (+${lineItems.length - 1} more)`
+        : firstDesc;
+
+      const dt = getFormattedDateTime();
+
+      const newRecord = {
+        id: 'rec-' + Date.now(),
+        date: dt.isoDate,
+        ref: invNo,
+        client: client,
+        description: summaryDesc,
+        amount: Math.round(totals.grandTotal * 100) / 100,
+        status: 'Paid'
+      };
+
+      incomeRecords.unshift(newRecord);
+      saveIncomeRecords(incomeRecords);
+      showToast(`Logged ${invNo} (LKR ${newRecord.amount.toLocaleString()}) to Monthly Income!`, 'success');
+    }
+
+    function handleAddManualIncome(e) {
+      e.preventDefault();
+      const date = document.getElementById('income-date').value;
+      const ref = document.getElementById('income-ref').value.trim();
+      const client = document.getElementById('income-client').value.trim();
+      const desc = document.getElementById('income-desc').value.trim();
+      const amount = parseFloat(document.getElementById('income-amount').value) || 0;
+      const status = document.getElementById('income-status').value;
+
+      if (amount <= 0) {
+        showToast('Please enter a valid positive amount.', 'error');
+        return;
+      }
+
+      incomeRecords.unshift({
+        id: 'rec-' + Date.now(),
+        date,
+        ref,
+        client,
+        description: desc,
+        amount,
+        status
+      });
+
+      saveIncomeRecords(incomeRecords);
+      e.target.reset();
+      document.getElementById('income-date').value = getFormattedDateTime().isoDate;
+      renderIncomeDashboard();
+      showToast('Monthly income record saved successfully.', 'success');
+    }
+
+    function deleteIncomeRecord(id) {
+      incomeRecords = incomeRecords.filter(r => r.id !== id);
+      saveIncomeRecords(incomeRecords);
+      renderIncomeDashboard();
+      showToast('Income entry removed.', 'info');
+    }
+
+    function toggleIncomeStatus(id) {
+      const rec = incomeRecords.find(r => r.id === id);
+      if (rec) {
+        rec.status = rec.status === 'Paid' ? 'Pending' : 'Paid';
+        saveIncomeRecords(incomeRecords);
+        renderIncomeDashboard();
+      }
+    }
+
+    function updateNavBadge() {
+      const badge = document.getElementById('nav-income-count');
+      if (badge) badge.textContent = incomeRecords.length;
+    }
+
+    function renderIncomeDashboard() {
+      const selectedMonth = document.getElementById('filter-month').value;
+      const searchQuery = (document.getElementById('income-search').value || '').toLowerCase().trim();
+
+      const filtered = incomeRecords.filter(rec => {
+        const matchesMonth = selectedMonth === 'ALL' || rec.date.startsWith(selectedMonth);
+        const matchesSearch = !searchQuery ||
+          rec.client.toLowerCase().includes(searchQuery) ||
+          rec.ref.toLowerCase().includes(searchQuery) ||
+          rec.description.toLowerCase().includes(searchQuery);
+        return matchesMonth && matchesSearch;
+      });
+
+      // Calculate KPIs
+      const totalRevenue = filtered.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+      const count = filtered.length;
+      const avgValue = count > 0 ? totalRevenue / count : 0;
+
+      document.getElementById('kpi-total-revenue').textContent = `LKR ${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('kpi-invoice-count').textContent = count;
+      document.getElementById('kpi-avg-value').textContent = `LKR ${avgValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('kpi-period-label').textContent = selectedMonth === 'ALL' ? 'All recorded months' : `Filtered: ${selectedMonth}`;
+
+      // Render Ledger Table
+      const tbody = document.getElementById('income-ledger-tbody');
+      tbody.innerHTML = '';
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="py-10 text-center text-slate-400">
+              <i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>
+              No income entries found for this filter.
+            </td>
+          </tr>
+        `;
+      } else {
+        filtered.forEach(rec => {
+          const isPaid = rec.status === 'Paid';
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50/80 transition-colors';
+          tr.innerHTML = `
+            <td class="py-3.5 px-4 font-mono text-slate-600 whitespace-nowrap">${rec.date}</td>
+            <td class="py-3.5 px-4 font-bold text-indigo-700 whitespace-nowrap">${escapeHtml(rec.ref)}</td>
+            <td class="py-3.5 px-4 font-semibold text-slate-900">${escapeHtml(rec.client)}</td>
+            <td class="py-3.5 px-4 text-slate-600 max-w-xs truncate">${escapeHtml(rec.description)}</td>
+            <td class="py-3.5 px-4 whitespace-nowrap">
+              <button
+                onclick="toggleIncomeStatus('${rec.id}')"
+                class="px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors ${isPaid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}"
+                title="Click to toggle status"
+              >
+                ${isPaid ? 'Paid' : 'Pending'}
+              </button>
+            </td>
+            <td class="py-3.5 px-4 text-right font-extrabold text-slate-900 whitespace-nowrap">
+              ${Number(rec.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </td>
+            <td class="py-3.5 px-4 text-center">
+              <button
+                onclick="deleteIncomeRecord('${rec.id}')"
+                class="text-slate-400 hover:text-rose-600 transition-colors p-1.5"
+                title="Delete record"
+              >
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      renderMonthlyChart();
+    }
+
+    function renderMonthlyChart() {
+      const ctx = document.getElementById('monthlyIncomeChart');
+      if (!ctx) return;
+
+      const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthlyTotals = new Array(12).fill(0);
+
+      incomeRecords.forEach(rec => {
+        if (rec.date && rec.date.startsWith('2026-')) {
+          const monthIdx = parseInt(rec.date.split('-')[1], 10) - 1;
+          if (monthIdx >= 0 && monthIdx < 12) {
+            monthlyTotals[monthIdx] += parseFloat(rec.amount) || 0;
+          }
+        }
+      });
+
+      if (incomeChartInstance) {
+        incomeChartInstance.destroy();
+      }
+
+      incomeChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: monthLabels,
+          datasets: [{
+            label: 'Monthly Income (LKR)',
+            data: monthlyTotals,
+            backgroundColor: '#4f46e5',
+            hoverBackgroundColor: '#3730a3',
+            borderRadius: 8,
+            maxBarThickness: 32
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => `LKR ${Number(context.raw).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: '#f1f5f9' },
+              ticks: {
+                font: { size: 11, family: 'Inter' },
+                callback: (val) => val >= 1000 ? `${val / 1000}k` : val
+              }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 11, family: 'Inter', weight: '600' } }
+            }
+          }
+        }
+      });
+    }
+
+    function exportIncomeCSV() {
+      if (incomeRecords.length === 0) {
+        showToast('No income records available to export.', 'error');
+        return;
+      }
+      const headers = ['Date', 'Invoice_Ref', 'Client', 'Description', 'Status', 'Amount_LKR'];
+      const rows = incomeRecords.map(r => [
+        r.date,
+        `"${r.ref.replace(/"/g, '""')}"`,
+        `"${r.client.replace(/"/g, '""')}"`,
+        `"${r.description.replace(/"/g, '""')}"`,
+        r.status,
+        r.amount
+      ]);
+
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `Hexa_Web_Solutions_Monthly_Income_${getFormattedDateTime().isoDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Monthly income CSV exported.', 'success');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. BOOTSTRAP ON PAGE LOAD
+    // -------------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      regenerateInvoiceNumber();
+      renderLineItemsEditor();
+      syncPreview();
+      updateLiveTimestamps();
+      updateNavBadge();
+
+      // Set default date on manual income form
+      const incomeDateInput = document.getElementById('income-date');
+      if (incomeDateInput) incomeDateInput.value = getFormattedDateTime().isoDate;
+
+      // Live ticking clock for accurate PDF generation timestamp
+      setInterval(updateLiveTimestamps, 1000);
+    });
+  </script>
+</body>
+</html>
